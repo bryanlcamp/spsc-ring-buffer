@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "Mac-HFT",
+            "includePath": [
+                "${workspaceFolder}/libs/core/include/**"
+            ],
+            "defines": [
+                "__GNUC__=15",
+                "__ARM_ARCH=8"
+            ],
+            "macFrameworkPath": [
+                "/System/Library/Frameworks",
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/opt/homebrew/bin/g++-15", 
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "macos-clang-arm64",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/libs/core/include/**",
+                    "/opt/homebrew/include"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            }
+        }
+    ],
+    "version": 4
+}

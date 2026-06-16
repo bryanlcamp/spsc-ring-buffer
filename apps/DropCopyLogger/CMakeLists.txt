@@ -1,0 +1,2 @@
+add_executable(DropCopyLogger main.cpp)
+target_link_libraries(DropCopyLogger PRIVATE spsc_ring_buffer)

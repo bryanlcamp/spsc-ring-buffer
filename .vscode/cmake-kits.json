@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Homebrew GCC 15",
+    "compilers": {
+      "CXX": "/opt/homebrew/bin/g++-15"
+    }
+  }
+]

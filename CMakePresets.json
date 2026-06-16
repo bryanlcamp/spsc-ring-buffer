@@ -1,0 +1,51 @@
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "default-gcc",
+      "displayName": "GCC Core Optimized",
+      "description": "Cross-platform release preset targeting native hardware vector pipelines on Linux and macOS",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "displayName": "MSVC Windows Heavy Optimization",
+      "description": "Native Windows build preset utilizing strict MSVC Link-Time Code Generation architectures",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-all",
+      "displayName": "Compile All Targets",
+      "configurePreset": "default-gcc"
+    },
+    {
+      "name": "build-all-win",
+      "displayName": "Compile All Windows Targets",
+      "configurePreset": "windows-msvc"
+    }
+  ]
+}

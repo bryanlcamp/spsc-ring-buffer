@@ -1,0 +1,9 @@
+# Ignore local CMake and compiler build footprints
+build/
+.DS_Store
+*.log
+*.a
+*.so
+*.exe
+*.dll
+*.lib

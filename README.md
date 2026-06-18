@@ -28,7 +28,7 @@ This queue is designed to be 100% independent. The only files necessary to copy 
 - **Toolchain**: A compiler that supports C++ 23 (`g++ >= 13` or `clang++ >= 17`).
 - **Build System**: CMake version 3.25 or higher.
 
-### Executing the examples:
+## <b>Executing the examples:<b><br>
 To compile and execute, use ./build.sh in the project's rood directory. E.g., 
 ./build.sh clean
 ./build.sh init

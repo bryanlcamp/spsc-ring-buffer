@@ -9,7 +9,7 @@ The following metrics represent were measured on an Apple M2 (2022) Macbook Air.
 ### 1. Inbound Ingestion Pipeline (`CmeDecoder`)
 - **Test input: 21 million CME SBE msgs/sec.
 - **Avg Latency**: 562.555 ns
-- **p50**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*
+- **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*
 - **p95**: 2,000 ns
 - **p99**: 13,000 ns
 - **99.9**: 36,000 ns

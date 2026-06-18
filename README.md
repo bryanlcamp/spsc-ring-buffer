@@ -1,5 +1,5 @@
 # Low-Latency C++23 SPSC Lock-Free Ring Buffer
-A low-latency, single-producer single-consumer (SPSC) queue written in C++ 23. Suitable for high frequency trading (HFT), or any project where nanseconds are critical. Performs CPU core optimizations on modern x86_64 and ARM64 architectures,  including thread-pinning setting core affinity. Uses immediate functions (constexpr, consteval, etc.) where appropriate while doing its best to avoid cache misses. And ultimaetly is L1/L2 cache-aware on indiviudual cores.
+A low-latency, single-producer single-consumer (SPSC) queue, written in C++ 23. Suitable for high frequency trading (HFT), or any project where nanseconds are critical. Performs CPU core optimizations on modern x86_64 and ARM64 architectures,  including thread-pinning, affinity, and maximizing each core's L1/L2 cache. It uses immediate functions (constexpr, consteval, etc.) where appropriate while doing its best to avoid cache misses. Needless to say, virtual functions are avoided at all costs. It uses branch prediction to maintain each core's history and to keep the CPU from stalling. 
 
 ## Performance Profiles (MacBook Air Benchmark Results)
 

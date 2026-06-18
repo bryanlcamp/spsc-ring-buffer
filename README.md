@@ -12,12 +12,12 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 - **p99**: 13,000 ns
 - **99.9**: 36,000 ns
 
-- Important Note: The metrics above include the following:
-- Receipt of a CME MBE message.
-- Inserting the raw, binary message onto onto the SPSC queue.
-- Popping the raw, binary message off of the SPSC queuue.
-- Deserialing the CME message
-- Inserting fields from the message into a much smaller, app-friendly data-structure
+  1. Important Note: The metrics above include the following:
+  2. Receipt of a CME MBE message.
+  3 Inserting the raw, binary message onto onto the SPSC queue.
+  4. Popping the raw, binary message off of the SPSC queuue.
+  5. Deserialing the CME message
+  6. Inserting fields from the message into a much smaller, app-friendly data-structure
 
 ### 2. Outbound Offloading Pipeline (`DropCopyLogger`)
 - **Average Time Per Transfer**: 32.499 ns/msg

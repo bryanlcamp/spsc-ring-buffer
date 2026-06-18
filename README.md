@@ -1,6 +1,5 @@
 # Low-Latency C++23 SPSC Lock-Free Ring Buffer
-
-A header-only, zero-dependency, single-producer single-consumer (SPSC) queue optimized for low latency, and high-frequency trading (HFT) workflows. This ring buffer is bult using C++23 to achieve maximum throughput and deterministic core-to-core data transport on modern x86_64 and ARM64 architectures.
+A low-latency, single-producer single-consumer (SPSC) queue written in C++ 23. Suitable for high frequency trading (HFT), or any project where performance is critical. Maximizes core-to-core data communication on modern x86_64 and ARM64 architectures.
 
 ## Performance Profiles (MacBook Air Benchmark Results)
 

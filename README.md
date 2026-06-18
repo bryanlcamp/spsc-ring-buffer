@@ -21,14 +21,10 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 - **p99**: 13,000 ns<br>
 - **99.9**: 36,000 ns<br><br>
 
-### 2. Outbound Offloading Pipeline (`DropCopyLogger`)
-- **Average Time Per Transfer**: 32.499 ns/msg
-- **Throughput Performance**: 31.25 Million reports/sec
-
-## Stand-Alone Deployment:
+## <b>Stand-Alone Deployment:</b><br>
 This queue is designed to be 100% independent. The only files necessary to copy are in the include directory.
 
-### Prerequisites:
+## <b>Prerequisites:</b><br>
 - **Toolchain**: A compiler that supports C++ 23 (`g++ >= 13` or `clang++ >= 17`).
 - **Build System**: CMake version 3.25 or higher.
 

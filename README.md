@@ -4,7 +4,7 @@ A header-only, zero-dependency, single-producer single-consumer (SPSC) queue opt
 
 ## Performance Profiles (MacBook Air Benchmark Results)
 
-The following metrics represent were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantagee of thread affinity, pinning tasks to cores, or turning off unused cores. And, in a production environment, one would likely be using server-grade hardware. Note that this solution is software-only: it assumes kernel-bypass, FPGA, etc. are not available. 
+The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantagee of thread affinity, pinning tasks to cores, or turning off unused cores. And, in a production environment, one would likely be using server-grade hardware. Note that this solution is software-only: it assumes kernel-bypass, FPGA, etc. are not available. 
 
 ### 1. Inbound Ingestion Pipeline (`CmeDecoder`)
 - **Test input: 21 million CME SBE msgs/sec.

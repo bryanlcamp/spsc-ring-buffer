@@ -5,20 +5,20 @@ A low-latency, single-producer single-consumer (SPSC) queue, written in C++ 23. 
 The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantage of many of the core optimizations listed above. I have performed these checks on Linux, but do not have the complete set of metrics. This is on my TODO list. Also, in a production environment, one would likely be using server-grade hardware. Note that this solution is <u><b>software-only</b></u>: it assumes kernel-bypass, and FPGA, are not available. 
 
 ### 1. <b>CmeDecoder</b>: Input and Metrics<br>
-####Inputs<br>
+<b>Inputs<b><br>
 a. Test input: 21 million CME SBE msgs/sec.<br>
 b. **Avg Latency**: 562.555 ns<br>
 c. **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
 d. **p95**: 2,000 ns<br>
 e. **p99**: 13,000 ns<br>
-f. **99.9**: 36,000 ns<br>
-  ####Metrics<br>
-  1. Important Note: The metrics above include the following:
-  2. Receipt of a CME MBE message.
-  3 Inserting the raw, binary message onto onto the SPSC queue.
-  4. Popping the raw, binary message off of the SPSC queuue.
-  5. Deserialing the CME message
-  6. Inserting fields from the message into a much smaller, app-friendly data-structure
+f. **99.9**: 36,000 ns<br><br>
+<b>Metrics<b><br>
+1. Important Note: The metrics above include the following:
+2. Receipt of a CME MBE message.
+3 Inserting the raw, binary message onto onto the SPSC queue.
+4. Popping the raw, binary message off of the SPSC queuue.
+5. Deserialing the CME message
+6. Inserting fields from the message into a much smaller, app-friendly data-structure
 
 ### 2. Outbound Offloading Pipeline (`DropCopyLogger`)
 - **Average Time Per Transfer**: 32.499 ns/msg

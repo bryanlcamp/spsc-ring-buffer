@@ -4,8 +4,8 @@ A low-latency, single-producer single-consumer (SPSC) queue, written in C++ 23. 
 ## Performance Profiles (Apple M2 (2022) Macbook Air)
 The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantage of many of the core optimizations listed above. I have performed these checks on Linux, but do not have the complete set of metrics. This is on my TODO list. Also, in a production environment, one would likely be using server-grade hardware. Note that this solution is <u><b>software-only</b></u>: it assumes kernel-bypass, and FPGA, are not available. <br><br>
 
-## <b>Performance:</b><br>
-<b>Inputs:</b><br>
+## <b>Inputs:</b><br>
+<b>Messages:</b><br>
 - 26.5 msg/sec
 - Note: The metrics above include the following:
 - Receipt of a CME MBE message.

@@ -6,19 +6,19 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 
 ### 1. <b>CmeDecoder</b>: Input and Metrics<br>
 <b>Inputs<b><br>
-1. Test input: 21 million CME SBE msgs/sec.<br>
-2. **Avg Latency**: 562.555 ns<br>
-3. **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
-4. **p95**: 2,000 ns<br>
-5. **p99**: 13,000 ns<br>
-6. **99.9**: 36,000 ns<br><br>
+- **Test input: 21 million CME SBE msgs/sec.<br>
+- **Avg Latency**: 562.555 ns<br>
+- **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
+- **p95**: 2,000 ns<br>
+- **p99**: 13,000 ns<br>
+- **99.9**: 36,000 ns<br><br>
 <b>Metrics<b><br>
-1. Important Note: The metrics above include the following:
-2. Receipt of a CME MBE message.
-3 Inserting the raw, binary message onto onto the SPSC queue.
-4. Popping the raw, binary message off of the SPSC queuue.
-5. Deserialing the CME message
-6. Inserting fields from the message into a much smaller, app-friendly data-structure
+- **Important Note: The metrics above include the following:
+- **Receipt of a CME MBE message.
+- **Inserting the raw, binary message onto onto the SPSC queue.
+- **Popping the raw, binary message off of the SPSC queuue.
+- **Deserialing the CME message
+- **Inserting fields from the message into a much smaller, app-friendly data-structure
 
 ### 2. Outbound Offloading Pipeline (`DropCopyLogger`)
 - **Average Time Per Transfer**: 32.499 ns/msg

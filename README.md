@@ -41,73 +41,18 @@ This benchmark measures the **Raw Transport Cost PLUS the Full Protocol Processi
 - **Non-Invasive Compile-Time Telemetry**: Latency tracking is evaluated via `if constexpr` parameters. Setting `kBenchmarkMode = false` instructs the compiler's optimization pass to remove every tracking variable and clock polling command, generating an un-polluted, zero-footprint production binary.
 
 ## Stand-Alone Deployment: Using the Queue Natively
+This queue is designed to be 100% independent. The only files necessary to copy are in the include directory.
 
-This queue is designed to be 100% independent. To utilize this component inside an external project, you do not need the full repository, CMake configurations, or the exchange libraries. You only need to copy the standalone header directory:
-
-```text
-libs/spsc_ring_buffer/
-└── include/
-    └── spsc_ring_buffer/
-        ├── Platform.h                  # Architecture assembly & core pinning hooks
-        ├── SpScRingBuffer.h            # Lock-free circular matrix
-        └── SpScRingBufferConsumer.h    # Stack-allocated jthread consumer framework
-```
-
-### Native Code Integration Example
-
-```cpp
-#include "spsc_ring_buffer/SpScRingBuffer.h"
-#include "spsc_ring_buffer/SpScRingBufferConsumer.h"
-#include <iostream>
-
-struct PriceUpdate {
-    int64_t  price;
-    int32_t  quantity;
-    char     side;
-};
-
-int main() {
-    // 1. Allocate a standalone queue instance (Must be a power of 2 capacity)
-    spsc_ring_buffer::SpScRingBuffer<PriceUpdate, 1024> marketQueue;
-
-    // 2. Setup the zero-allocation jthread consumer framework via CTAD guides
-    spsc_ring_buffer::SpScRingBufferConsumer consumer(marketQueue, [](const PriceUpdate& event) noexcept {
-        std::cout << "Received Price Update: " << event.price << " x " << event.quantity << "\n";
-    });
-
-    // Hard-pin consumer thread to isolated hardware core 2
-    consumer.start(2);
-
-    // 3. Enqueue via rvalue move or copy variants
-    marketQueue.tryPush(PriceUpdate{.price = 45502500000, .quantity = 50, .side = 'B'});
-
-    consumer.stop();
-    return 0;
-}
-```
-
-## Compilation and Execution Guide
 
 ### Prerequisite Environment
 - **Toolchain**: A strict C++23 compliant compiler (`g++ >= 13` or `clang++ >= 17`).
 - **Build System**: CMake version 3.25 or higher.
 
 ### Executing the Simulators
-To compile and execute either multi-threaded workload simulation on Linux or macOS, run the following commands from the project root directory:
-
-```bash
-# 1. Purge legacy build caches completely
+To compile and execute, use ./build.sh in the project's rood directory. E.g., 
 ./build.sh clean
-
-# 2. Initialize platform presets via native toolchain selection
 ./build.sh init
-
-# 3. Launch the Inbound CME Market Data Decoder Example
-./build.sh CmeExample
-
-# 4. Launch the Outbound Asynchronous Drop Copy Logger Example
 ./build.sh DropCopyLogger
-```
 
 ### Production Compilation Rule Constraints
 When building this repository or lifting the stand-alone headers into a production environment, you must ensure that Link-Time Optimization (LTO) and host microarchitecture targeting flags (`-O3 -march=native -flto`) are fully engaged by your compiler. This allows the compiler's loop optimization passes to fully flatten the layout boundaries, inline the pointer mapping methods, and eliminate dead safety branches.

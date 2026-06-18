@@ -13,7 +13,8 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 - Popping the raw, binary message off of the SPSC queuue.
 - Deserialing the CME message.
 - Inserting fields from the message into a much smaller, app-friendly data-structure.<br><br>
-<b>Stastics:</b><br>
+## <b>Outputs:</b><br>
+<b>Performance:</b><br>
 - **Avg Latency**: 562.555 ns<br>
 - **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
 - **p95**: 2,000 ns<br>

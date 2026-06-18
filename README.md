@@ -29,7 +29,7 @@ This queue is designed to be 100% independent. The only files necessary to copy 
 - **Build System**: CMake version 3.25 or higher.
 
 ## <b>Executing the examples:<b><br>
-To compile and execute, use ./build.sh in the project's rood directory. E.g., 
-./build.sh clean
-./build.sh init
-./build.sh CmeDecoder
+To compile and execute, use ./build.sh in the project's rood directory. E.g.,<br> 
+- ./build.sh clean
+- ./build.sh init
+- ./build.sh CmeDecoder

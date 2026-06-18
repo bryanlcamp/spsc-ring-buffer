@@ -1,18 +1,18 @@
 # Low-Latency C++23 SPSC Lock-Free Ring Buffer
 
-A header-only, zero-dependency, single-producer single-consumer (SPSC) circular queue optimized for high-frequency trading (HFT) workflows. This module is engineered under strict C++23 tracking specifications to achieve maximum throughput and deterministic core-to-core data transport on modern x86_64 and ARM64 architectures.
+A header-only, zero-dependency, single-producer single-consumer (SPSC) queue optimized for low latency, and high-frequency trading (HFT) workflows. This ring buffer is bult using C++23 to achieve maximum throughput and deterministic core-to-core data transport on modern x86_64 and ARM64 architectures.
 
 ## Performance Profiles (MacBook Air Benchmark Results)
 
-The following metrics represent real-world multi-threaded execution patterns running natively on stock hardware without kernel bypass or specialized hardware assistance.
+The following metrics represent were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantagee of thread affinity, pinning tasks to cores, or turning off unused cores. And, in a production environment, one would likely be using server-grade hardware. Note that this solution is software-only: it assumes kernel-bypass, FPGA, etc. are not available. 
 
-### 1. Inbound Ingestion Pipeline (`CmeExample`)
-- **Average Latency**: 562.555 ns
-- **Median (p50)**: 0 ns *(Indicates processing completion drops below the minimum tick resolution bounds of the operating system's steady tracking clock)*
-- **95th Percentile (p95)**: 2,000 ns
-- **99th Percentile (p99)**: 13,000 ns
-- **99.9th Percentile (p99.9)**: 36,000 ns
-- **Throughput Performance**: 21 Million msgs/sec
+### 1. Inbound Ingestion Pipeline (`CmeDecoder`)
+- **Test input: 21 million CME SBE msgs/sec.
+- **Avg Latency**: 562.555 ns
+- **p50**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*
+- **p95**: 2,000 ns
+- **p99**: 13,000 ns
+- **99.9**: 36,000 ns
 
 ### 2. Outbound Offloading Pipeline (`DropCopyLogger`)
 - **Average Time Per Transfer**: 32.499 ns/msg
@@ -28,7 +28,7 @@ This benchmark measures the **pure, isolated software transport latency** of the
 - **The Core Interconnect Limit**: The 32ns boundary represents the raw physical hardware speed limit of the CPU's internal L1/L2 memory fabric shifting cache lines back and forth via cache coherency invalidation protocols under a maximum capacity load.
 - **Hot-Path Handoff Optimization**: Because the consumer loop executes on an entirely separate background core, the trading thread only pays the immediate `tryPush()` instruction cost (roughly **10 to 12 nanoseconds**) before instantly resuming market operations. Heavy text formatting and disk I/O are hidden entirely off the critical path.
 
-### The Inbound Flow (`CmeExample` | ~562.555 ns)
+### The Inbound Flow (`CmeDecoder` | ~562.555 ns)
 This benchmark measures the **Raw Transport Cost PLUS the Full Protocol Processing Loop Cost**. It represents a true production-representative electronic trading pipeline.
 - **What it is doing**: The consumer core pops a generic binary chunk from the queue and dispatches it directly to a decoupled CME MDP 3.0 protocol library. The decoder un-packs the complex binary wire format, reads the `CmePacketHeader`, parses the binary `SbeMessageHeader`, walks a variable-length `SbeGroupHeader` block, sequentially processes 3 nested price/volume depth layers, branchlessly translates exchange character actions/side tags into clean application primitives, and outputs a simplified `BookUpdateEvent` onto the thread's stack.
 

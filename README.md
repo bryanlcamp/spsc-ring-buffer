@@ -6,12 +6,12 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 
 ### 1. <b>CmeDecoder</b>: Input and Metrics<br>
 <b>Inputs<b><br>
-a. Test input: 21 million CME SBE msgs/sec.<br>
-b. **Avg Latency**: 562.555 ns<br>
-c. **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
-d. **p95**: 2,000 ns<br>
-e. **p99**: 13,000 ns<br>
-f. **99.9**: 36,000 ns<br><br>
+1. Test input: 21 million CME SBE msgs/sec.<br>
+2. **Avg Latency**: 562.555 ns<br>
+3. **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
+4. **p95**: 2,000 ns<br>
+5. **p99**: 13,000 ns<br>
+6. **99.9**: 36,000 ns<br><br>
 <b>Metrics<b><br>
 1. Important Note: The metrics above include the following:
 2. Receipt of a CME MBE message.

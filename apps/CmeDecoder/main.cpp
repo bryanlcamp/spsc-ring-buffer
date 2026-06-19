@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <thread>
 #include <cstring>
-#include "spsc_ring_buffer/SpScRingBuffer.h"
-#include "spsc_ring_buffer/SpScRingBufferConsumer.h"
+#include "../../libs/spsc_ring_buffer/include/spsc_ring_buffer/SpScRingBuffer.h"
+#include "../../libs/spsc_ring_buffer/include/spsc_ring_buffer/SpScRingBufferConsumer.h"
 #include "cme/CmeBinaryDecoder.h"
 
 using namespace spsc_ring_buffer;

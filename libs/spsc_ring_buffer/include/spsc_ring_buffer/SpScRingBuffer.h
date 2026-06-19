@@ -147,7 +147,7 @@ public:
   /**
    * @brief In-Place Consumer Element Inspection Accessor
    * 
-   * C++23 Specific: Uses explicit object parameter 'deducing this' to squash const/non-const duplicates into
+   * C++23 only: Uses explicit object parameter 'deducing this' to squash const/non-const duplicates into
    * a single template instance, preserving L1 instruction cache localization and optimization bounds.
    */
   template <typename Self>
@@ -157,7 +157,7 @@ public:
       if (tail == self._cachedHead) [[unlikely]] {
           self._cachedHead = self._head.load(std::memory_order_acquire);
           if (tail == self._cachedHead) [[unlikely]] {
-              // Return nullptr on empty state to prevent UB branch trimming execution bugs
+              // Return nullptr on empty state to prevent UB branch trimming execution bugs.
               return static_cast<std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const T*, T*>>(nullptr);
           }
       }
@@ -175,14 +175,14 @@ private:
       std::byte data[sizeof(T)];
   };
 
-  // 1. Storage Array Buffer Frame Matrix
+  // 1. Storage Array Buffer Frame Matrix.
   alignas(CacheLine) std::array<StorageSlot, Capacity> _buffer;
 
-  // 2. Producer Write-State Cache Boundary (Isolates Producer thread modifications)
+  // 2. Producer Write-State Cache Boundary (Isolates Producer thread modifications).
   alignas(CacheLine) std::atomic<size_t> _head;
   size_t _cachedTail{0}; // Thread-Local State: Read/Written exclusively by the Producer thread
 
-  // 3. Consumer Read-State Cache Boundary (Isolates Consumer thread modifications)
+  // 3. Consumer Read-State Cache Boundary (Isolates Consumer thread modifications).
   alignas(CacheLine) std::atomic<size_t> _tail;
   size_t _cachedHead{0}; // Thread-Local State: Read/Written exclusively by the Consumer thread
 

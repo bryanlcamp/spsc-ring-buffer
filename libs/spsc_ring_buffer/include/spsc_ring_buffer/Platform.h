@@ -3,6 +3,10 @@
 #include <thread>
 #include <cstddef>
 
+/**
+ * @brief Supporting functions for the spsc ring buffer framework.
+ */
+
 #if defined(__linux__)
     #include <pthread.h>
     #include <sched.h>
@@ -42,7 +46,7 @@ inline bool pinCurrentThread([[maybe_unused]] int coreId) noexcept {
         pthread_t currentThread = pthread_self();
         return pthread_setaffinity_np(currentThread, sizeof(cpu_set_t), &cpuset) == 0;
     #else
-        // C++23 optimization invariant hint for local Mac/Windows environments
+        // C++23 only: optimization invariant hint for local Mac/Windows environments.
         [[assume(coreId >= 0)]];
         return true; 
     #endif
@@ -54,7 +58,7 @@ inline bool pinCurrentThread([[maybe_unused]] int coreId) noexcept {
  */
 inline constexpr std::size_t getCacheLineSize() noexcept {
 #if defined(__cpp_lib_hardware_interference_size)
-    // Silences ABI drift warnings on localized compiler variants
+    // Silences ABI drift warnings on localized compiler variants.
     return std::hardware_destructive_interference_size;
 #else
     #if defined(__aarch64__) || defined(__arm__) || defined(_M_ARM64)

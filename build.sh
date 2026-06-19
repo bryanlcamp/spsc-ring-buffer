@@ -11,7 +11,7 @@ print_usage() {
     echo "Commands:"
     echo "  init            Configure the build system using platform presets"
     echo "  all             Compile all libraries and applications"
-    echo "  CmeExample      Compile and launch the CME market data handler"
+    echo "  CmeDecoder      Compile and launch the CME market data handler"
     echo "  DropCopyLogger  Compile and launch the asynchronous execution logger"
     echo "  clean           Completely wipe the build cache folder"
     echo "===================================================="
@@ -45,14 +45,14 @@ case "$1" in
         echo "--> Compiling all HFT targets simultaneously..."
         cmake --build "$BUILD_DIR" --target all
         ;;
-    CmeExample)
+    CmeDecoder)
         ensure_init
-        cmake --build "$BUILD_DIR" --target CmeExample
+        cmake --build "$BUILD_DIR" --target CmeDecoder
         if [ $? -eq 0 ]; then
             if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-                ./"$BUILD_DIR"/apps/CmeExample/Release/CmeExample.exe
+                ./"$BUILD_DIR"/apps/CmeDecoder/Release/CmeDecoder.exe
             else
-                ./"$BUILD_DIR"/apps/CmeExample/CmeExample
+                ./"$BUILD_DIR"/apps/CmeDecoder/CmeDecoder
             fi
         fi
         ;;

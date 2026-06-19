@@ -34,5 +34,5 @@ endif()
 # 3. Discover and register modular subdirectories in dependency order
 add_subdirectory(libs/protocols)
 add_subdirectory(libs/spsc_ring_buffer)
-add_subdirectory(apps/CmeExample)
+add_subdirectory(apps/CmeDecoder)
 add_subdirectory(apps/DropCopyLogger)

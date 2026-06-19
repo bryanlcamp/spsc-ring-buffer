@@ -12,7 +12,7 @@ print_usage() {
     echo "  init            Configure the build system using platform presets"
     echo "  all             Compile all libraries and applications"
     echo "  CmeDecoder      Compile and launch the CME market data handler"
-    echo "  DropCopyLogger  Compile and launch the asynchronous execution logger"
+    echo "  test            Compile and run the offline test suite"
     echo "  clean           Completely wipe the build cache folder"
     echo "===================================================="
 }
@@ -24,8 +24,12 @@ ensure_init() {
         echo "--> Build folder missing. Initializing system configurations first..."
         if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
             cmake --preset windows-msvc
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            # Inject Homebrew GCC variables safely for specialized Mac development environments
+            CC="/opt/homebrew/bin/gcc-15" CXX="/opt/homebrew/bin/g++-15" cmake --preset default-gcc
         else
-            cmake --preset default-gcc -DCMAKE_CXX_FLAGS="-Wno-interference-size"
+            # Linux falls back seamlessly to standard system toolchains
+            cmake --preset default-gcc
         fi
     fi
 }
@@ -36,8 +40,10 @@ case "$1" in
         rm -rf "$BUILD_DIR"
         if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
             cmake --preset windows-msvc
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            CC="/opt/homebrew/bin/gcc-15" CXX="/opt/homebrew/bin/g++-15" cmake --preset default-gcc
         else
-            cmake --preset default-gcc -DCMAKE_CXX_FLAGS="-Wno-interference-size"
+            cmake --preset default-gcc
         fi
         ;;
     all)
@@ -56,15 +62,15 @@ case "$1" in
             fi
         fi
         ;;
-    DropCopyLogger)
+    test)
         ensure_init
-        cmake --build "$BUILD_DIR" --target DropCopyLogger
+        echo "--> Compiling and running unit tests..."
+        # 1. Compile the test executable target defined in tests/CMakeLists.txt
+        cmake --build "$BUILD_DIR" --target unit_tests
+        
+        # 2. Run the tests using CTest directly via --test-dir if compilation succeeded
         if [ $? -eq 0 ]; then
-            if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-                ./"$BUILD_DIR"/apps/Release/DropCopyLogger.exe
-            else
-                ./"$BUILD_DIR"/apps/DropCopyLogger/DropCopyLogger
-            fi
+            ctest --test-dir "$BUILD_DIR" --output-on-failure
         fi
         ;;
     clean)

@@ -31,30 +31,32 @@ public:
   SpScRingBuffer() : _head(0), _tail(0), _dropped(0), _peakOccupancy(0) {}
 
   /**
-   * @brief Destructor guarantees proper type-erasure stack unwinding.
+   * @brief Guarantee the queue is emptied before deletion..
    */
   ~SpScRingBuffer() noexcept {
       T dummy;
       while (tryPop(dummy)); 
   }
 
-  // Enforce structural non-copyable/non-movable properties to maintain cache line layout invariants
+  // No copying or moving allowed.
   SpScRingBuffer(const SpScRingBuffer&) = delete;
   SpScRingBuffer& operator=(const SpScRingBuffer&) = delete;
   SpScRingBuffer(SpScRingBuffer&&) = delete;
   SpScRingBuffer& operator=(SpScRingBuffer&&) = delete;
 
   /**
-   * @brief Single Message Enqueue via Const Reference (Lvalue Copy)
+   * @brief Enqueue via Lvalue copy.
    */
-  [[nodiscard]] bool tryPush(const T& item) noexcept(std::is_nothrow_copy_constructible_v<T>) {
+  [[nodiscard]] bool tryPush(const T& item) noexcept(
+    std::is_nothrow_copy_constructible_v<T>) {
       return emplaceImpl(item);
   }
 
   /**
-   * @brief Zero-Copy Single Message Enqueue via Rvalue Move Semantics
+   * @brief Enqueue via Rvalue move.
    */
-  [[nodiscard]] bool tryPush(T&& item) noexcept(std::is_nothrow_move_constructible_v<T>) {
+  [[nodiscard]] bool tryPush(T&& item) noexcept(
+    std::is_nothrow_move_constructible_v<T>) {
       return emplaceImpl(std::move(item));
   }
 

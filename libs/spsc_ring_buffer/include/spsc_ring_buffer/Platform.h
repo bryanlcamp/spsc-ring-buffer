@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <cstddef>
+#include <new>
 
 /**
  * @brief Supporting functions for the spsc ring buffer framework.
@@ -57,14 +58,27 @@ inline bool pinCurrentThread([[maybe_unused]] int coreId) noexcept {
  * Maximizes cache packing efficiency without risking false-sharing collisions.
  */
 inline constexpr std::size_t getCacheLineSize() noexcept {
-#if defined(__cpp_lib_hardware_interference_size)
-    // Silences ABI drift warnings on localized compiler variants.
-    return std::hardware_destructive_interference_size;
+// Exclude AppleClang/Apple compilers because they advertise support but fail to implement it
+#if defined(__cpp_lib_hardware_interference_size) && !defined(__apple_build_version__)
+    // Locally disable GCC's ABI drift interference size warnings for this evaluation pass
+    #if defined(__GNUC__)
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Winterference-size"
+    #endif
+
+    constexpr std::size_t size = std::hardware_destructive_interference_size;
+
+    #if defined(__GNUC__)
+        #pragma GCC diagnostic pop
+    #endif
+
+    return size;
 #else
     #if defined(__aarch64__) || defined(__arm__) || defined(_M_ARM64)
-        return 256; // Adjusted to match your MacBook's exact hardware runtime parameter
+        // Hard-pinned to 256 bytes to match Apple Silicon (M1-M4) cache lines perfectly
+        return 256; 
     #else
-        return 64;  // Standard x86 platforms layout metric
+        return 64;  // Standard x86 platforms baseline metric
     #endif
 #endif
 }

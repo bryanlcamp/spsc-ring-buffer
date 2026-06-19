@@ -15,11 +15,11 @@ The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequen
 - Inserting fields from the message into a much smaller, app-friendly data-structure.<br><br>
 ## <b>Outputs:</b><br>
 <b>Performance:</b><br>
-- **Avg Latency**: 562.555 ns<br>
+- **Avg Latency**: 234.703 ns<br>
 - **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
-- **p95**: 2,000 ns<br>
-- **p99**: 13,000 ns<br>
-- **99.9**: 36,000 ns<br><br>
+- **p95**:   1'000 ns<br>
+- **p99**:   4'000 ns<br>
+- **99.9**: 17'000 ns<br><br>
 
 ## <b>Stand-Alone Deployment:</b><br>
 This queue is designed to be 100% independent. The only files necessary to copy are in the include directory.

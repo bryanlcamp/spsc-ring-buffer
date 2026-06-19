@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <thread>
 #include <cstring>
+
+// TODO: fix these paths.
 #include "../../libs/spsc_ring_buffer/include/spsc_ring_buffer/SpScRingBuffer.h"
 #include "../../libs/spsc_ring_buffer/include/spsc_ring_buffer/SpScRingBufferConsumer.h"
 #include "cme/CmeBinaryDecoder.h"
@@ -18,106 +20,143 @@ inline constexpr bool kBenchmarkMode = true; // Set to 'false' for pure, 100% un
 
 inline constexpr size_t kNumMessages = 1'000'000;
 inline constexpr size_t kWarmupMessages = 50'000;
+inline constexpr size_t kWarmupMilliseconds = 50;
 
 namespace {
+    // Ugly, but this is an example.
     alignas(64) std::array<uint64_t, kBenchmarkMode ? kNumMessages : 1> g_latencies;
     std::atomic<size_t> g_receivedCount{0};
 }
 
 int main() {
-    // 1. Allocate the generic lock-free transport queue (Agnostic POD container)
+    // Allocate the queue with benchmark mode enabled.
     SpScRingBuffer<CmeMarketPacket<kBenchmarkMode>, 8192> cmeQueue;
+
+    // Allocate the CME MBE binary packet decoder.
     CmeBinaryDecoder decoder;
 
-    // 2. Setup Consumer Worker Thread - Processing the Full Extraction Chain
-    SpScRingBufferConsumer consumer(cmeQueue, [&decoder](const auto& pkt) noexcept {
-        uint64_t endTime = 0;
-        if constexpr (kBenchmarkMode) {
-            endTime = std::chrono::steady_clock::now().time_since_epoch().count();
+    // Start the queue's consumer thread.
+    SpScRingBufferConsumer consumer(cmeQueue, [&decoder](const auto& packet) noexcept {
+      uint64_t endTime = 0;
+      if constexpr (kBenchmarkMode) {
+        endTime = std::chrono::steady_clock::now().time_since_epoch().count();
+      }
+        
+      // Turn the CME SBE packet into our own data structure.
+      // Note: we're on the consumer's thread.
+      BookUpdateEvent appEvent;
+      decoder.decode(packet, appEvent);
+      [[maybe_unused]] uint32_t activeSequence = appEvent.wireSequence;
+      [[maybe_unused]] int64_t  topOfBookBid = appEvent.levels[0].price;
+        
+      if constexpr (kBenchmarkMode) {
+        if (packet.payload.transactTime >= kWarmupMessages) [[likely]] {
+          size_t sampleIdx = packet.payload.transactTime - kWarmupMessages;
+          g_latencies[sampleIdx] = static_cast<uint64_t>(endTime - packet.pipelineEntryNs);
         }
-        
-        // Allocate a zero-overhead application destination frame directly on the thread's stack
-        BookUpdateEvent appEvent;
-        
-        // Execute extraction, field mapping, and character casting loops
-        decoder.decode(pkt, appEvent);
-        
-        // --- SIMULATE APPLICATION TRADING STRATEGY RECEIVING THE SIMPLIFIED EVENT ---
-        [[maybe_unused]] uint32_t activeSequence = appEvent.wireSequence;
-        [[maybe_unused]] int64_t  topOfBookBid = appEvent.levels[0].price;
-        
-        if constexpr (kBenchmarkMode) {
-            if (pkt.payload.transactTime >= kWarmupMessages) [[likely]] {
-                size_t sampleIdx = pkt.payload.transactTime - kWarmupMessages;
-                g_latencies[sampleIdx] = static_cast<uint64_t>(endTime - pkt.pipelineEntryNs);
-            }
-        }
-        g_receivedCount.fetch_add(1, std::memory_order_relaxed);
+      }  
+      
+      // End CmeBinaryDecoder processing
+
+      g_receivedCount.fetch_add(1, std::memory_order_relaxed);
     });
 
-    std::cout << "--> Spinning up consumer thread loop (Timing Mode: " << (kBenchmarkMode ? "ON" : "OFF") << ")..." << std::endl;
-    consumer.start(2); // Pins consumer thread to isolated hardware core 2 on Linux production systems
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Start the consumer the thread (pin to core 2 on Linux/Windows).
+    consumer.start(2);
 
-    // 3. Allocate a cache-aligned stack wire buffer block to simulate network packet arrivals
+    // Allow the producer some time to warm up.
+    std::this_thread::sleep_for(std::chrono::milliseconds(kWarmupMilliseconds));
+
+    // Allocate a cache-aligned buffer to simulate CME packet arrivals.
+    // We could also do this via UDP Multicast if necessary.
     alignas(64) std::array<uint8_t, sizeof(CmeMarketPacket<kBenchmarkMode>)> rawNetworkStream;
     std::memset(rawNetworkStream.data(), 0, rawNetworkStream.size());
 
-    // Pre-populate the immutable CME SBE fields inside the network bytes ahead of time
-    auto* pktHeader = reinterpret_cast<CmePacketHeader*>(rawNetworkStream.data());
-    auto* sbeHeader = reinterpret_cast<SbeMessageHeader*>(rawNetworkStream.data() + sizeof(CmePacketHeader));
-    sbeHeader->blockLength = sizeof(CmeMdIncrementalRefresh);
-    sbeHeader->templateId = 42; 
-    sbeHeader->schemaId = 197;
-    sbeHeader->version = 3;
-
-    auto* grpHeader = reinterpret_cast<SbeGroupHeader*>(
-        rawNetworkStream.data() + sizeof(CmePacketHeader) + sizeof(SbeMessageHeader) + sizeof(CmeMdIncrementalRefresh)
+    // Initialize CME/SBE packet/message/group headers.
+    auto* packetHeader = reinterpret_cast<CmePacketHeader*>(rawNetworkStream.data());
+    auto* sbeMessageHeader = reinterpret_cast<SbeMessageHeader*>(rawNetworkStream.data() + 
+      sizeof(CmePacketHeader));
+    sbeMessageHeader->blockLength = sizeof(CmeMdIncrementalRefresh);
+    sbeMessageHeader->templateId = 42; 
+    sbeMessageHeader->schemaId   = 197;
+    sbeMessageHeader->version    = 3;
+    auto* groupHeader = reinterpret_cast<SbeGroupHeader*>(
+      rawNetworkStream.data()  + 
+      sizeof(CmePacketHeader)  + 
+      sizeof(SbeMessageHeader) + 
+      sizeof(CmeMdIncrementalRefresh)
     );
-    grpHeader->blockLength = sizeof(CmeMdPriceLevel);
-    grpHeader->numInGroup = 3; 
+    groupHeader->blockLength = sizeof(CmeMdPriceLevel);
+    groupHeader->numInGroup  = 3; 
 
-    // Map pointer alignments across the internal array blocks
-    auto* level0 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + (0 * sizeof(CmeMdPriceLevel)));
-    auto* level1 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + (1 * sizeof(CmeMdPriceLevel)));
-    auto* level2 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + (2 * sizeof(CmeMdPriceLevel)));
+    // Map pointer alignments.
+    auto* level0 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + 
+      offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + 
+      (0 * sizeof(CmeMdPriceLevel)));
+    auto* level1 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + 
+      offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + 
+      (1 * sizeof(CmeMdPriceLevel)));
+    auto* level2 = reinterpret_cast<CmeMdPriceLevel*>(rawNetworkStream.data() + 
+      offsetof(CmeMarketPacket<kBenchmarkMode>, bookLevels) + 
+      (2 * sizeof(CmeMdPriceLevel)));
 
-    level0->mdEntryPx = 45502500000; level0->mdEntrySize = 25; level0->mdPriceLevel = 1; level0->mdUpdateAction = 0; level0->mdEntryType = '0'; 
-    level1->mdEntryPx = 45505000000; level1->mdEntrySize = 14; level1->mdPriceLevel = 1; level1->mdUpdateAction = 0; level1->mdEntryType = '1'; 
-    level2->mdEntryPx = 45500000000; level2->mdEntrySize = 110; level2->mdPriceLevel = 2; level2->mdUpdateAction = 1; level2->mdEntryType = '0'; 
+    level0->mdEntryPx = 45502500000; 
+    level0->mdEntrySize = 25; 
+    level0->mdPriceLevel = 1; 
+    level0->mdUpdateAction = 0; 
+    level0->mdEntryType = '0';
+
+    level1->mdEntryPx = 45505000000; 
+    level1->mdEntrySize = 14; 
+    level1->mdPriceLevel = 1; 
+    level1->mdUpdateAction = 0; 
+    level1->mdEntryType = '1';
+
+    level2->mdEntryPx = 45500000000;
+    level2->mdEntrySize = 110;
+    level2->mdPriceLevel = 2;
+    level2->mdUpdateAction = 1;
+    level2->mdEntryType = '0'; 
 
     const size_t totalIterations = kWarmupMessages + kNumMessages;
+
+    // Benchmarking.
     auto startWallTime = std::chrono::steady_clock::now();
 
-    // 4. Hot Producer Network Driver Loop - Slamming the queue
+    // Slam the queue.
     for (size_t i = 0; i < totalIterations; ++i) {
-        pktHeader->msgSeqNum = static_cast<uint32_t>(i);
-        pktHeader->sendingTime = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
+      packetHeader->msgSeqNum = static_cast<uint32_t>(i);
+      packetHeader->sendingTime = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
 
-        auto* payload = reinterpret_cast<CmeMdIncrementalRefresh*>(rawNetworkStream.data() + sizeof(CmePacketHeader) + sizeof(SbeMessageHeader));
-        payload->transactTime = i; 
-        payload->matchEventIndicator = 0x80;
+      auto* payload = 
+        reinterpret_cast<CmeMdIncrementalRefresh*>(rawNetworkStream.data() + 
+          sizeof(CmePacketHeader) + 
+          sizeof(SbeMessageHeader));
+      payload->transactTime = i; 
+      payload->matchEventIndicator = 0x80;
 
-        // Direct memory casting from raw bytes straight into the queue transport slot
-        auto* wirePacketCast = reinterpret_cast<CmeMarketPacket<kBenchmarkMode>*>(rawNetworkStream.data());
+      // Direct memory casting from raw bytes straight into the queue transport slot
+      auto* wirePacketCast = 
+        reinterpret_cast<CmeMarketPacket<kBenchmarkMode>*>(rawNetworkStream.data());
         
-        if constexpr (kBenchmarkMode) {
-            wirePacketCast->pipelineEntryNs = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
-        }
+      if constexpr (kBenchmarkMode) {
+        wirePacketCast->pipelineEntryNs = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
+      }
 
-        while (!cmeQueue.tryPush(*wirePacketCast)) {
-            cpuPause(); 
-        }
+      while (!cmeQueue.tryPush(*wirePacketCast)) {
+        // Back off if the queue is full.
+        cpuPause(); 
+      }
     }
 
+    // Wait on the consumer to drain the queue.
     while (g_receivedCount.load(std::memory_order_relaxed) < totalIterations) {
         cpuPause();
     }
-    
     auto endWallTime = std::chrono::steady_clock::now();
     consumer.stop();
 
-    // 5. Render Full Pipeline Performance Metrics Summary
+    // Print our benchmarks.
     if constexpr (kBenchmarkMode) {
         std::sort(g_latencies.begin(), g_latencies.end());
         uint64_t sum = std::accumulate(g_latencies.begin(), g_latencies.end(), 0ULL);
@@ -142,8 +181,9 @@ int main() {
                   << "    99th Percentile (p99): " << p99 << " ns\n"
                   << "    99.9th (Tail p999)   : " << p999 << " ns\n"
                   << "====================================================\n" << std::endl;
-    } else {
-        std::cout << "Production run complete. Telemetry bypassed successfully." << std::endl;
+    } 
+    else {
+        std::cout << "Production run complete. No statistics gathered." << std::endl;
     }
 
     return 0;

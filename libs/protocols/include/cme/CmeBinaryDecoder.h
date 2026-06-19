@@ -37,7 +37,7 @@ struct CmeMdPriceLevel {
 };
 
 struct CmeMdIncrementalRefresh {
-    uint64_t transactTime;        // Ingress execution time from CME matching engine core
+    uint64_t transactTime;         // Ingress execution time from CME matching engine core
     uint32_t matchEventIndicator;  // Bitfield flag indicating final packet block states
 };
 

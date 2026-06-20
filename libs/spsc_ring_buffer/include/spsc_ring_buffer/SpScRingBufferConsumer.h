@@ -1,13 +1,14 @@
 #pragma once
 
-#include "spsc_ring_buffer/SpScRingBuffer.h"
-#include "spsc_ring_buffer/Platform.h"
 #include <cstddef>
 #include <cstdint>
 #include <thread>
 #include <utility>
 #include <type_traits>
 #include <functional>
+
+#include "spsc_ring_buffer/SpScRingBuffer.h"
+#include "spsc_ring_buffer/Platform.h"
 
 namespace spsc_ring_buffer {
 
@@ -20,7 +21,7 @@ inline constexpr size_t kConsumeBatchSize = 16; // Maximizes pipeline utilizatio
  * @tparam Callback Functional execution context triggered upon message consumption.
  * @tparam N Capacity boundary constraint mapped straight to the ring buffer target.
  */
-template <typename MsgType, typename Callback, size_t N = DefaultRingBufferCapacity>
+template <typename MsgType, typename Callback, size_t N = DefaultCapacity>
 class SpScRingBufferConsumer {
 public:
     SpScRingBufferConsumer(SpScRingBuffer<MsgType, N> &buffer, Callback callback)
@@ -41,7 +42,7 @@ public:
     void start(int coreId = -1) {
         _consumerThread = std::jthread([this, coreId](std::stop_token stopToken) { 
             // Lock executing engine thread context onto isolated architecture segment
-            pinCurrentThread(coreId);
+            spsc_ring_buffer::platform::pinCurrentThread(coreId);
             consumeLoopFused(stopToken); 
         });
     }
@@ -71,7 +72,7 @@ private:
 
             if (processed == 0) [[unlikely]] {
                 // Apply low-level architecture pause loop hints to eliminate pipeline stalls on dry paths
-                cpuPause(); 
+                spsc_ring_buffer::platform::cpuPause(); 
             }
         }
     }

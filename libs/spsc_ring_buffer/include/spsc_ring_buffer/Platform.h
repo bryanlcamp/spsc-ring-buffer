@@ -15,7 +15,7 @@
     #include <intrin.h>
 #endif
 
-namespace spsc_ring_buffer {
+namespace spsc_ring_buffer::platform {
 
 /**
  * @brief Software-driven hardware execution hint.

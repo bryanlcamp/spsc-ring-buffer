@@ -8,37 +8,41 @@
 #include <chrono>
 #include <cstddef>
 
-#include "spsc_ring_buffer/Platform.h"
+#include "spsc_ring_buffer/Platform.h" 
 
 namespace spsc_ring_buffer {
 
-inline constexpr size_t   DefaultRingBufferCapacity = 1024;
+inline constexpr size_t   DefaultCapacity = 1024;
 inline constexpr uint64_t SpinCheckInterval = 1024;
 inline constexpr uint64_t SpinCheckMask = SpinCheckInterval - 1;
 inline constexpr uint32_t DefaultPushTimeoutMs = 5000;
 
 /**
- * @brief Thread-isolated, zero-allocation lock-free single-producer single-consumer circular queue.
+ * @brief Lock free, zero allocation, single producer single consumer ring buffer.
  *
- * @tparam T Core message type payload. Does NOT require default constructibility.
- * @tparam Capacity Slot allocation boundary. MUST represent an explicit power of two.
+ * @tparam T. Payload. Does not require constructability.        
+ * @tparam Capacity. Ring buffer capacity. Must be a power of 2 due to bitwise operation.
  */
-template <typename T, size_t Capacity = DefaultRingBufferCapacity>
+template <typename T, size_t Capacity = DefaultCapacity>
 class SpScRingBuffer {
   static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be an exact power of 2");
 
 public:
-  SpScRingBuffer() : _head(0), _tail(0), _dropped(0), _peakOccupancy(0) {}
+  SpScRingBuffer() : 
+    _head(0),            // the head index (this ring buffer is circular)
+    _tail(0),            // the tail index (this ring buffer is circular)
+    _dropped(0),         // the total amoun of packets dropped
+    _peakOccupancy(0) {} // the maximum size of the ring buffer
 
   /**
-   * @brief Guarantee the queue is emptied before deletion..
+   * @brief Destructor tries to empty the queue before deletion.
    */
   ~SpScRingBuffer() noexcept {
       T dummy;
       while (tryPop(dummy)); 
   }
 
-  // No copying or moving allowed.
+  // Both copying and moving the ring buffer are disallowed.
   SpScRingBuffer(const SpScRingBuffer&) = delete;
   SpScRingBuffer& operator=(const SpScRingBuffer&) = delete;
   SpScRingBuffer(SpScRingBuffer&&) = delete;
@@ -46,14 +50,22 @@ public:
 
   /**
    * @brief Enqueue via Lvalue copy.
+   * @returns False if: 
+   *            (1) The value is not allowed to be copied.
+   *            (2) The ring buffer is full.
+   *          True: otherwise.
    */
   [[nodiscard]] bool tryPush(const T& item) noexcept(
     std::is_nothrow_copy_constructible_v<T>) {
-      return emplaceImpl(item);
+      return spsc_ring_buffer::platform::emplaceImpl(item);
   }
 
   /**
    * @brief Enqueue via Rvalue move.
+   * @returns False if: 
+   *            (1) The value is not allowed to be copied.
+   *            (2) The ring buffer is full.
+   *          True: otherwise.
    */
   [[nodiscard]] bool tryPush(T&& item) noexcept(
     std::is_nothrow_move_constructible_v<T>) {
@@ -61,7 +73,11 @@ public:
   }
 
   /**
-   * @brief High-Throughput Aggressive Spinning Push Loop
+   * @brief Blocks until the payload is successfully pushed into the ring buffer.
+   *        Gives up trying if the default timeout is reached.
+   *        See DefaultPushTimeoutMs above. Modify this variable how you wish.
+   * @returns True:  The payload was successfully inserted into the ring buffer.
+   *          False: Otherwise.
    */
   template <typename U>
   bool push(U&& item, uint32_t timeoutMs = DefaultPushTimeoutMs) {
@@ -70,9 +86,14 @@ public:
     uint64_t spinCounter = 0;
 
     while (true) {
-      if (emplaceImpl(std::forward<U>(item))) return true;
+      if (emplaceImpl(std::forward<U>(item))) {
+        // The item was successfully addded to the ring buffer.
+        return true;
+      }
 
-      // Amortize time telemetry checks to minimize system call overhead inside hot spin paths
+      // The item could not be added to the buffer. Keep trying.
+      // If we have exceeded the timeout duration then stop and return false.
+      // It's likely we will have popped some items off the queue to make some space.
       if ((spinCounter++ & SpinCheckMask) == 0) [[unlikely]] {
         if (std::chrono::steady_clock::now() - startTime >= timeoutDuration) {
           _dropped.fetch_add(1, std::memory_order_relaxed);
@@ -80,7 +101,8 @@ public:
         }
       }
 
-      cpuPause(); 
+      // To prevent a completely tight loop, allow a context switch.
+      spsc_ring_buffer::platform::cpuPause(); 
     }
   }
 
@@ -166,29 +188,31 @@ public:
       return self.getPtr(tail);
   }
 
+
+  [[nodiscard]] constexpr size_t getCapacity() const noexcept { return Capacity; }
   [[nodiscard]] size_t getDropped() const noexcept { return _dropped.load(std::memory_order_relaxed); }
   [[nodiscard]] size_t getPeakCount() const noexcept { return _peakOccupancy.load(std::memory_order_relaxed); }
 
 private:
-  static constexpr size_t CacheLine = getCacheLineSize();
+  static constexpr size_t CacheLine = spsc_ring_buffer::platform::getCacheLineSize();
   static constexpr size_t IndexMask = Capacity - 1;
 
   struct alignas(alignof(T)) StorageSlot {
       std::byte data[sizeof(T)];
   };
 
-  // 1. Storage Array Buffer Frame Matrix.
+  // The array holding the buffer contents.
   alignas(CacheLine) std::array<StorageSlot, Capacity> _buffer;
 
-  // 2. Producer Write-State Cache Boundary (Isolates Producer thread modifications).
+  // Producer write cache boundary. Read/written to exclusively by the producer thread.
   alignas(CacheLine) std::atomic<size_t> _head;
-  size_t _cachedTail{0}; // Thread-Local State: Read/Written exclusively by the Producer thread
+  size_t _cachedTail{0};
 
-  // 3. Consumer Read-State Cache Boundary (Isolates Consumer thread modifications).
+  // Consumer read cache boundary. Read/written to exclusively by consumer thread.
   alignas(CacheLine) std::atomic<size_t> _tail;
-  size_t _cachedHead{0}; // Thread-Local State: Read/Written exclusively by the Consumer thread
+  size_t _cachedHead{0};
 
-  // 4. Operational Diagnostics Metrics Boundary Zone
+  // Simple diagnostics.
   alignas(CacheLine) std::atomic<size_t> _dropped;
   alignas(CacheLine) std::atomic<size_t> _peakOccupancy;
 

@@ -145,13 +145,13 @@ int main() {
 
       while (!cmeQueue.tryPush(*wirePacketCast)) {
         // Back off if the queue is full.
-        cpuPause(); 
+        spsc_ring_buffer::platform::cpuPause(); 
       }
     }
 
     // Wait on the consumer to drain the queue.
     while (g_receivedCount.load(std::memory_order_relaxed) < totalIterations) {
-        cpuPause();
+        spsc_ring_buffer::platform::cpuPause();
     }
     auto endWallTime = std::chrono::steady_clock::now();
     consumer.stop();

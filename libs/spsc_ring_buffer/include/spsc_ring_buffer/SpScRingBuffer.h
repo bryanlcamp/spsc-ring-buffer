@@ -57,7 +57,7 @@ public:
    */
   [[nodiscard]] bool tryPush(const T& item) noexcept(
     std::is_nothrow_copy_constructible_v<T>) {
-      return spsc_ring_buffer::platform::emplaceImpl(item);
+      return emplaceImpl(item);
   }
 
   /**
@@ -143,7 +143,7 @@ public:
     const size_t tail = _tail.load(std::memory_order_relaxed);
     
     if (tail == _cachedHead) {
-      _cachedHead = _head.load(std::memory_order_acquire); 
+      _cachedHead = _head.load(std::memory_order_acquire);
       if (tail == _cachedHead) return 0; 
     }
 

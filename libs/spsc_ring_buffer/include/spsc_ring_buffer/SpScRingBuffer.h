@@ -107,41 +107,49 @@ public:
   }
 
   /**
-   * @brief Low-Overhead Single Message Dequeue (Fast-Path Consumer)
+   * @brief Returns the item in the queue that has been waiting the longest.
+   * @returns Immediately returns false if the queue is empty.
    */
   [[nodiscard]] bool tryPop(T& item) noexcept(std::is_nothrow_move_assignable_v<T>) {
     const size_t tail = _tail.load(std::memory_order_relaxed);
 
-    // Look-ahead cache matching: Queries local register state before accessing shared system bus
+    // Look-ahead cache matching.
     if (tail == _cachedHead) [[unlikely]] {
-      _cachedHead = _head.load(std::memory_order_acquire); // Acquire fence locks downstream data visibility
+      // Acquire memory fence that locks downstream data visibility.
+      _cachedHead = _head.load(std::memory_order_acquire); 
       if (tail == _cachedHead) [[unlikely]] {
         return false; 
       }
     }
 
+    // There's an item in the queue to return it.
+    // Get the item to return and reclaim its space.
+
     #if defined(__GNUC__) || defined(__clang__)
-      // Stream next sequential memory address block straight into CPU L1 cache line ahead of time
+      // Update the tail pointer.
       __builtin_prefetch(getPtr(increment(tail)), 0, 1);
     #endif
 
+    // Move the item to return out of the queue.
     T* objectPtr = getPtr(tail);
     item = std::move(*objectPtr);
-    std::destroy_at(objectPtr); // Explicitly invoke destructor to finalize placement cell lifecycle
+    std::destroy_at(objectPtr);
 
-    // Release fence ensures slot data reads are finished before allowing the producer to reclaim space
+    // Release the memory fence and reclaim space.
     _tail.store(increment(tail), std::memory_order_release);
     return true;
   }
 
   /**
-   * @brief High-Speed Fused Batch Processing Interface
+   * @brief Drains the queue.
    * Processes sequential blocks of messages while executing exactly ONE release fence per burst.
    */
   template <typename Callback>
   size_t popBatch(Callback&& callback, size_t maxBatchSize) noexcept {
     const size_t tail = _tail.load(std::memory_order_relaxed);
     
+    // Check if the ring buffer is empty.
+    // If not, set a memory fence for downstream iterations.
     if (tail == _cachedHead) {
       _cachedHead = _head.load(std::memory_order_acquire);
       if (tail == _cachedHead) return 0; 
@@ -150,6 +158,7 @@ public:
     size_t localTail = tail;
     size_t processed = 0;
 
+    // Iterate through queue and keep returning items one-by-one.
     while (localTail != _cachedHead && processed < maxBatchSize) [[likely]] {
       #if defined(__GNUC__) || defined(__clang__)
         __builtin_prefetch(getPtr(increment(localTail)), 0, 1);
@@ -163,7 +172,7 @@ public:
       ++processed;
     }
 
-    // Amortize core interconnect invalidation overhead by committing all data movements in a single instruction
+    // Release the memory fence.
     _tail.store(localTail, std::memory_order_release);
     return processed;
   }

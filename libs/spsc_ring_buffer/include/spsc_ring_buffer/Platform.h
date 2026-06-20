@@ -34,8 +34,7 @@ inline void cpuPause() noexcept {
 }
 
 /**
- * @brief Software-driven core allocation binding.
- * Hard-pins the executing OS execution block to an isolated physical core.
+ * @brief Pins a thread to the specified core id.
  */
 inline bool pinCurrentThread([[maybe_unused]] int coreId) noexcept {
     #if defined(__linux__)
@@ -54,8 +53,7 @@ inline bool pinCurrentThread([[maybe_unused]] int coreId) noexcept {
 }
 
 /**
- * @brief Hard-locked layout boundary matrix markers.
- * Maximizes cache packing efficiency without risking false-sharing collisions.
+ * @brief Provides the size of a cache line in bytes.
  */
 inline constexpr std::size_t getCacheLineSize() noexcept {
 // Exclude AppleClang/Apple compilers because they advertise support but fail to implement it

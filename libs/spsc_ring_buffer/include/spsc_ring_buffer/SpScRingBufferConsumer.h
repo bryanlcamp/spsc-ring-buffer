@@ -12,7 +12,7 @@
 
 namespace spsc_ring_buffer {
 
-inline constexpr size_t kConsumeBatchSize = 16; // Maximizes pipeline utilization rates
+inline constexpr size_t kConsumeBatchSize = 16; // Maximizes pipeline utilization rates.
 
 /**
  * @brief Thread-isolated event consumer framework designed for low-latency batch sweeping.
@@ -31,7 +31,7 @@ public:
 
     ~SpScRingBufferConsumer() = default;
 
-    // Strict non-copyable bounds to maintain runtime context line isolation
+    // Copying is not allowed.
     SpScRingBufferConsumer(const SpScRingBufferConsumer&) = delete;
     SpScRingBufferConsumer& operator=(const SpScRingBufferConsumer&) = delete;
 
@@ -41,7 +41,7 @@ public:
      */
     void start(int coreId = -1) {
         _consumerThread = std::jthread([this, coreId](std::stop_token stopToken) { 
-            // Lock executing engine thread context onto isolated architecture segment
+            // Lock executing engine thread context onto isolated architecture segment.
             spsc_ring_buffer::platform::pinCurrentThread(coreId);
             consumeLoopFused(stopToken); 
         });
@@ -60,18 +60,20 @@ public:
 private:
     SpScRingBuffer<MsgType, N> &_buffer;
     Callback _callback;
-    std::jthread _consumerThread; // Optimized: Zero-allocation stack-allocated joint thread manager
+
+    // Zero-allocation stack-allocated joint thread manager.
+    std::jthread _consumerThread; 
 
     /**
      * @brief High-Speed Fused Batch Processing hot-path interface.
      */
     void consumeLoopFused(std::stop_token stopToken) {
         while (!stopToken.stop_requested()) [[likely]] {
-            // Drain blocks of sequential messages using std::ref to guarantee zero-copy lambda evaluation
+            // Drain blocks of sequential messages using std::ref to guarantee zero-copy lambda evaluation.
             size_t processed = _buffer.popBatch(std::ref(_callback), kConsumeBatchSize);
 
             if (processed == 0) [[unlikely]] {
-                // Apply low-level architecture pause loop hints to eliminate pipeline stalls on dry paths
+                // Apply low-level architecture pause loop hints to eliminate pipeline stalls on dry paths.
                 spsc_ring_buffer::platform::cpuPause(); 
             }
         }

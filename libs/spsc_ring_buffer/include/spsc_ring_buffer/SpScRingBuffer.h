@@ -233,7 +233,7 @@ private:
     const size_t head = _head.load(std::memory_order_relaxed);
     const size_t nextHead = increment(head);
 
-    // High-speed branchless depth check targeting monotonic sequence counter layouts
+    // High-speed branchless depth check targeting monotonic sequence counter layouts.
     if ((nextHead - _cachedTail) > Capacity) [[unlikely]] {
       _cachedTail = _tail.load(std::memory_order_acquire);
       if ((nextHead - _cachedTail) > Capacity) [[unlikely]] {
@@ -242,10 +242,10 @@ private:
       }
     }
 
-    // Modern placement constructor instantiation straight onto uninitialized memory byte slots
+    // Modern placement constructor instantiation straight onto uninitialized memory byte slots.
     std::construct_at(getPtr(head), std::forward<Args>(args)...);
     
-    // Release fence guarantees object instantiation is fully flashed to the bus BEFORE advancing index
+    // Release fence guarantees object instantiation is fully flashed to the bus BEFORE advancing index.
     _head.store(nextHead, std::memory_order_release);
     
     updatePeakOccupancy(nextHead);

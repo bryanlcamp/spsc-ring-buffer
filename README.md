@@ -4,15 +4,14 @@ A low-latency, single-producer single-consumer (SPSC) ring buffer, written in C+
 ## Performance Profiles (Apple M2 (2022) Macbook Air)
 The following metrics were measured on an Apple M2 (2022) Macbook Air. Consequently, I was not able to take advantage of many of the core optimizations listed above. I have tickets to perform these same checks on Linux and Windows. In a production environment, one would likely be using server-grade hardware. Note that this solution is <u><b>software-only</b></u>: it assumes kernel-bypass, and FPGA, are not available. <br><br>
 
-## <b>Inputs:</b><br>
-<b>CmeDecoder Metrics: End-To-End.</b><br>.
-- A total of 1,000,000 CME SBE messages.
+## <b>Inputs: 1,000,000 CME SBE messages.</b><br>
+<b>What's being measured:</b><br>
 - Inserting raw, binary messages into the SPSC ring buffer.
 - Popping raw, binary message off the SPSC ring buffer.
 - Deserialing the CME SBE message on the consumer thread.
 - Creating a much smaller, app-friendly data-structure for each message.
 - Capturing the metrics.<br><br>
-## <b>Outputs:</b><br>
+## <b>Results:</b><br>
 - **Avg Latency**: 168.272 ns<br>
 - **p50 (Median)**: 0 ns *(Tick resolution < bounds of the OS's steady tracking clock)*<br>
 - **p95**:   1'000 ns<br>
